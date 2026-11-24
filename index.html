@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pases Digitales - Estadio Hidalgo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #3a506b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 16px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 30px 22px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 390px;
+            text-align: center;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+        }
+        h1 { font-size: 22px; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .sub { font-size: 13px; color: #cbd5e1; margin-bottom: 22px; }
+        input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            outline: none;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .error { color: #ff8080; font-size: 13px; margin-top: 12px; display: none; }
+        
+        /* Pantalla de Pases */
+        #pantalla-boletos { display: none; padding: 22px 18px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .badge { background: rgba(37, 99, 235, 0.25); border: 1px solid #3b82f6; color: #93c5fd; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .evento-info { margin-bottom: 18px; }
+        .evento-info h2 { font-size: 18px; margin-bottom: 5px; line-height: 1.3; }
+        .evento-info p { font-size: 13px; color: #cbd5e1; line-height: 1.4; }
+
+        /* Tarjeta blanca del pase */
+        .pase-ticket {
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 16px;
+            padding: 20px 16px;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .qr-box {
+            display: inline-block;
+            padding: 10px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        .qr-box img { display: block; width: 170px; height: 170px; }
+        .serial { font-family: monospace; font-size: 12px; color: #64748b; margin-bottom: 14px; display: block; }
+        
+        .detalles-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 14px;
+            text-align: left;
+        }
+        .dato-full { grid-column: span 2; }
+        .dato-der { text-align: right; }
+        .label { font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; }
+        .valor { font-size: 15px; font-weight: bold; color: #0f172a; }
+
+        /* Controles de múltiples boletos */
+        .controles { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 10px; }
+        .btn-nav { background: rgba(255,255,255,0.15); padding: 10px; font-size: 13px; width: auto; flex: 1; }
+        .dots { display: flex; justify-content: center; gap: 6px; margin: 14px 0; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+        .dot.active { background: #3b82f6; transform: scale(1.2); }
+        .btn-volver { background: transparent; border: 1px solid rgba(255,255,255,0.3); margin-top: 8px; font-size: 13px; padding: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA 1: BUSCADOR -->
+    <div class="card" id="pantalla-inicio">
+        <h1>ACCESO DIGITAL</h1>
+        <p class="sub">Estadio Hidalgo, Pachuca de Soto, Hidalgo</p>
+        <input type="text" id="input-folio" placeholder="EJ. HIDALGO-001">
+        <button onclick="buscarBoleto()">Consultar Pases</button>
+        <div class="error" id="mensaje-error">Folio no válido. Revisa tu comprobante.</div>
+    </div>
+
+    <!-- PANTALLA 2: PASES QR -->
+    <div class="card" id="pantalla-boletos">
+        <div class="top-bar">
+            <span id="folio-tag" style="font-size: 13px; color: #94a3b8;">#HIDALGO-001</span>
+            <span class="badge" id="tipo-tag">Adulto</span>
+        </div>
+
+        <div class="evento-info">
+            <h2 id="evento-titulo">CF: Pachuca vs Guadalajara</h2>
+            <p id="evento-ubicacion">Estadio Hidalgo, Pachuca de Soto, Hidalgo</p>
+            <p id="evento-fecha" style="margin-top: 3px; color: #93c5fd; font-weight: bold;">Jue, Nov 26 • 19:00 hrs</p>
+        </div>
+
+        <div class="pase-ticket">
+            <div class="qr-box" id="qr-container"></div>
+            <span class="serial" id="serial-texto">0000000000</span>
+            
+            <div class="detalles-grid">
+                <div class="dato-full">
+                    <div class="label">Zona</div>
+                    <div class="valor" id="dato-zona">-</div>
+                </div>
+                <div>
+                    <div class="label">Sección</div>
+                    <div class="valor" id="dato-seccion">-</div>
+                </div>
+                <div class="dato-der">
+                    <div class="label">Asientos</div>
+                    <div class="valor" id="dato-asiento">-</div>
+                </div>
+                <div>
+                    <div class="label">Acceso</div>
+                    <div class="valor" id="dato-acceso">-</div>
+                </div>
+                <div class="dato-der">
+                    <div class="label">Escaleras</div>
+                    <div class="valor" id="dato-escaleras">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dots" id="dots-container"></div>
+
+        <div class="controles" id="controles-nav">
+            <button class="btn-nav" onclick="cambiarBoleto(-1)">◀ Anterior</button>
+            <span id="contador-boletos" style="font-size: 13px; font-weight: bold;">1 de 2</span>
+            <button class="btn-nav" onclick="cambiarBoleto(1)">Siguiente ▶</button>
+        </div>
+
+        <button class="btn-volver" onclick="volver()">Salir / Buscar otro folio</button>
+    </div>
+
+    <script>
+        const baseDeDatos = {
+            "HIDALGO-001": {
+                evento: "CF: Pachuca vs Guadalajara",
+                ubicacion: "Estadio Hidalgo, Pachuca de Soto, Hidalgo",
+                fecha: "Jue, Nov 26 • 19:00 hrs",
+                tipo: "Adulto",
+                boletos: [
+                    { zona: "Platea Oriente", seccion: "04", asiento: "104", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-001-104" },
+                    { zona: "Platea Oriente", seccion: "04", asiento: "105", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-001-105" }
+                ]
+            },
+            "HIDALGO-002": {
+                evento: "CF: Pachuca vs Guadalajara",
+                ubicacion: "Estadio Hidalgo, Pachuca de Soto, Hidalgo",
+                fecha: "Jue, Nov 26 • 19:00 hrs",
+                tipo: "Adulto",
+                boletos: [
+                    { zona: "Platea Oriente", seccion: "04", asiento: "106", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-002-106" },
+                    { zona: "Platea Oriente", seccion: "04", asiento: "107", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-002-107" }
+                ]
+            },
+            "HIDALGO-003": {
+                evento: "CF: Pachuca vs Guadalajara",
+                ubicacion: "Estadio Hidalgo, Pachuca de Soto, Hidalgo",
+                fecha: "Jue, Nov 26 • 19:00 hrs",
+                tipo: "Adulto",
+                boletos: [
+                    { zona: "Platea Oriente", seccion: "04", asiento: "108", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-003-108" },
+                    { zona: "Platea Oriente", seccion: "04", asiento: "109", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-003-109" }
+                ]
+            },
+            "HIDALGO-004": {
+                evento: "CF: Pachuca vs Guadalajara",
+                ubicacion: "Estadio Hidalgo, Pachuca de Soto, Hidalgo",
+                fecha: "Jue, Nov 26 • 19:00 hrs",
+                tipo: "Adulto",
+                boletos: [
+                    { zona: "Platea Oriente", seccion: "04", asiento: "110", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-004-110" },
+                    { zona: "Platea Oriente", seccion: "04", asiento: "111", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-004-111" }
+                ]
+            },
+            "HIDALGO-005": {
+                evento: "CF: Pachuca vs Guadalajara",
+                ubicacion: "Estadio Hidalgo, Pachuca de Soto, Hidalgo",
+                fecha: "Jue, Nov 26 • 19:00 hrs",
+                tipo: "Adulto",
+                boletos: [
+                    { zona: "Platea Oriente", seccion: "04", asiento: "112", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-005-112" },
+                    { zona: "Platea Oriente", seccion: "04", asiento: "113", acceso: "3", escaleras: "2", codigo: "PROTO-HIDALGO-005-113" }
+                ]
+            }
+        };
+
+        let ordenActual = null;
+        let indiceBoleto = 0;
+                function buscarBoleto() {
+            const folio = document.getElementById("input-folio").value.trim().toUpperCase();
+            const errorMsg = document.getElementById("mensaje-error");
+
+            if (baseDeDatos[folio]) {
+                errorMsg.style.display = "none";
+                ordenActual = baseDeDatos[folio];
+                indiceBoleto = 0;
+
+                document.getElementById("folio-tag").innerText = "#" + folio;
+                document.getElementById("tipo-tag").innerText = ordenActual.tipo;
+                document.getElementById("evento-titulo").innerText = ordenActual.evento;
+                document.getElementById("evento-ubicacion").innerText = ordenActual.ubicacion;
+                document.getElementById("evento-fecha").innerText = ordenActual.fecha;
+
+                document.getElementById("pantalla-inicio").style.display = "none";
+                document.getElementById("pantalla-boletos").style.display = "block";
+                renderizarBoleto();
+            } else {
+                errorMsg.style.display = "block";
+            }
+        }
+
+        function renderizarBoleto() {
+            const total = ordenActual.boletos.length;
+            const b = ordenActual.boletos[indiceBoleto];
+
+            const urlQR = "https://api.qrserver" + ".com/v1/create-qr-code/?size=180x180&data=" + b.codigo;
+            document.getElementById("qr-container").innerHTML = `<img src="${urlQR}" alt="QR">`;
+            document.getElementById("serial-texto").innerText = b.codigo;
+            document.getElementById("dato-zona").innerText = b.zona;
+            document.getElementById("dato-seccion").innerText = b.seccion;
+            document.getElementById("dato-asiento").innerText = b.asiento;
+            document.getElementById("dato-acceso").innerText = b.acceso;
+            document.getElementById("dato-escaleras").innerText = b.escaleras;
+
+            document.getElementById("contador-boletos").innerText = `${indiceBoleto + 1} de ${total}`;
+            document.getElementById("controles-nav").style.display = total > 1 ? "flex" : "none";
+
+            const dotsDiv = document.getElementById("dots-container");
+            dotsDiv.innerHTML = "";
+            if (total > 1) {
+                for (let i = 0; i < total; i++) {
+                    dotsDiv.innerHTML += `<div class="dot ${i === indiceBoleto ? 'active' : ''}"></div>`;
+                }
+            }
+        }
+
+        function cambiarBoleto(direccion) {
+            const total = ordenActual.boletos.length;
+            indiceBoleto = (indiceBoleto + direccion + total) % total;
+            renderizarBoleto();
+        }
+
+        function volver() {
+            document.getElementById("input-folio").value = "";
+            document.getElementById("pantalla-boletos").style.display = "none";
+            document.getElementById("pantalla-inicio").style.display = "block";
+        }
+    </script>
+</body>
+</html>
+
+
